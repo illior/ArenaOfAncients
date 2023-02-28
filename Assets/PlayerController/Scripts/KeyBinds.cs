@@ -7,5 +7,6 @@ namespace PlayerController
 	public static class KeyBinds
 	{
 		public static KeyCode JumpKey = KeyCode.Space;
+		public static KeyCode SprintKey = KeyCode.LeftShift;
 	}
 }

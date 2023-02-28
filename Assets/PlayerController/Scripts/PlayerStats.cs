@@ -15,12 +15,12 @@ namespace PlayerController
 			}
 		}
 
-		[SerializeField] private float runSpeed = 8f;
-		public float RunSpeed
-		{
+		[SerializeField] private float sprintSpeed = 8f;
+		public float SprintSpeed
+        {
 			get
 			{
-				return runSpeed;
+				return sprintSpeed;
 			}
 		}
 
