@@ -8,5 +8,6 @@ namespace PlayerController
 	{
 		public static KeyCode JumpKey = KeyCode.Space;
 		public static KeyCode SprintKey = KeyCode.LeftShift;
+		public static KeyCode DashKey = KeyCode.E;
 	}
 }

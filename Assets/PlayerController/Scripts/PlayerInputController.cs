@@ -30,7 +30,7 @@ namespace PlayerController
 
 		private void FixedUpdate()
 		{
-			_playerMovement.MovePlayer(verticalInput, horizontalInput);
+			_playerMovement.MovePlayer(verticalInput, horizontalInput, Input.GetKey(KeyBinds.SprintKey));
 		}
 
 		private void MyInput()

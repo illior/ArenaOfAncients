@@ -32,5 +32,21 @@ namespace PlayerController
 				return jumpForce;
 			}
 		}
-	}
+        [SerializeField] private float dashSpeed = 20f;
+        public float DashSpeed
+        {
+            get
+            {
+                return dashSpeed;
+            }
+        }
+        [SerializeField] private float dashForce = 20f;
+        public float DashForce
+        {
+            get
+            {
+                return dashForce;
+            }
+        }
+    }
 }

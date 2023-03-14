@@ -9,11 +9,14 @@ namespace PlayerController
 		[Header("Movement")]
 		[SerializeField] private float groundDrag;
 		[SerializeField] private float airMultiplier;
+		[SerializeField] private float dashSpeedChangeFactor;
 		private bool readyToJump;
 		private float moveSpeed;
 		private bool sprint;
 
-		[Header("Ground Check")]
+        [HideInInspector] public bool dashing;
+
+        [Header("Ground Check")]
 		[SerializeField] private float playerHeight;
 		[SerializeField] private LayerMask ground;
 		private bool grounded;
@@ -24,17 +27,18 @@ namespace PlayerController
 		private bool slope;
 		private bool exitingSlope;
 
-        private Rigidbody _rigidbody;
+		private Rigidbody _rigidbody;
 		private PlayerStats _playerStats;
 		[HideInInspector] public Transform orientation;
 
-		private Vector3 moveDirection;
+        private Vector3 moveDirection;
 
 		public enum MovementState
 		{
 			walking,
 			sprinting,
-			air
+			air,
+			dashing
 		}
 
 		private MovementState state;
@@ -66,34 +70,92 @@ namespace PlayerController
 			StateHandler();
 
 
-			if(grounded)
+			if(state == MovementState.walking || state == MovementState.sprinting)
 				_rigidbody.drag = groundDrag;
 			else
 				_rigidbody.drag = 0;
 		}
 
-		private void StateHandler()
+        private float desiredMoveSpeed;
+        private float lastDesiredMoveSpeed;
+        private MovementState lastState;
+        private bool keepMomentum;
+        private void StateHandler()
 		{
-			if(grounded && sprint)
+			if(dashing)
+			{
+				state = MovementState.dashing;
+                desiredMoveSpeed = _playerStats.DashSpeed;
+				speedChangeFactor = dashSpeedChangeFactor;
+			}else if(grounded && sprint)
 			{
 				state = MovementState.sprinting;
-				moveSpeed = _playerStats.SprintSpeed;
+                desiredMoveSpeed = _playerStats.SprintSpeed;
 			} else if(grounded)
 			{
 				state = MovementState.walking;
-				moveSpeed = _playerStats.WalkSpeed;
+                desiredMoveSpeed = _playerStats.WalkSpeed;
 			} else
 			{
 				state = MovementState.air;
+
+				if(desiredMoveSpeed < _playerStats.SprintSpeed)
+				{
+					desiredMoveSpeed = _playerStats.WalkSpeed;
+				} else
+				{
+					desiredMoveSpeed = _playerStats.SprintSpeed;
+				}
 			}
+
+            bool desiredMoveSpeedHasChanged = desiredMoveSpeed != lastDesiredMoveSpeed;
+            if (lastState == MovementState.dashing) keepMomentum = true;
+
+            if (desiredMoveSpeedHasChanged)
+            {
+                if (keepMomentum)
+                {
+                    StopAllCoroutines();
+                    StartCoroutine(SmoothlyLerpMoveSpeed());
+                }
+                else
+                {
+                    StopAllCoroutines();
+                    moveSpeed = desiredMoveSpeed;
+                }
+            }
+
+            lastDesiredMoveSpeed = desiredMoveSpeed;
+			lastState = state;
 		}
 
-		public void MovePlayer(float verticalInput, float horizontalInput, bool sprintInput = false)
+        private float speedChangeFactor;
+        private IEnumerator SmoothlyLerpMoveSpeed()
+        {
+            float time = 0;
+            float difference = Mathf.Abs(desiredMoveSpeed - moveSpeed);
+            float startValue = moveSpeed;
+
+            float boostFactor = speedChangeFactor;
+
+            while (time < difference)
+            {
+                moveSpeed = Mathf.Lerp(startValue, desiredMoveSpeed, time / difference);
+
+                time += Time.deltaTime * boostFactor;
+
+                yield return null;
+            }
+
+            moveSpeed = desiredMoveSpeed;
+            speedChangeFactor = 1f;
+            keepMomentum = false;
+        }
+
+        public void MovePlayer(float verticalInput, float horizontalInput, bool sprintInput = false)
 		{
 			moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
-			sprint = sprintInput;
-
-			moveSpeed = _playerStats.WalkSpeed;
+			sprint = sprintInput && verticalInput > 0;
 
 			if (slope && !exitingSlope)
 			{
@@ -116,7 +178,7 @@ namespace PlayerController
 			if (OnSlope() && !exitingSlope)
 			{
 				if (_rigidbody.velocity.magnitude > moveSpeed)
-                    _rigidbody.velocity = _rigidbody.velocity.normalized * moveSpeed;
+					_rigidbody.velocity = _rigidbody.velocity.normalized * moveSpeed;
 			} else
 			{
 				Vector3 flatVel = new Vector3(_rigidbody.velocity.x, 0f, _rigidbody.velocity.z);
@@ -136,8 +198,8 @@ namespace PlayerController
 
 		public void Jump()
 		{
-            exitingSlope = true;
-            readyToJump = false;
+			exitingSlope = true;
+			readyToJump = false;
 
 			_rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0f, _rigidbody.velocity.z);
 
@@ -146,8 +208,8 @@ namespace PlayerController
 
 		public void ResetJump()
 		{
-            exitingSlope = false;
-            readyToJump = true;
+			exitingSlope = false;
+			readyToJump = true;
 		}
 
 		private bool OnSlope()
